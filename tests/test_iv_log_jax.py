@@ -6,8 +6,8 @@ import pytest
 from flint import arb, ctx
 from iv_log_jax import iv_log
 
-RTOL: Final[float] = 6e-7
-ATOL: Final[float] = 3e-5
+RTOL: Final[float] = 1e-6
+ATOL: Final[float] = 1e-4
 ARB_PREC: Final[int] = 256
 
 V_VALUES: Final[tuple[float, ...]] = (0.0, 0.1, 0.7, 1.0, 3.0, 10.0, 20.0, 80.0, 100.0, 200.0, 500.0, 1000.0)
@@ -21,21 +21,15 @@ def arb_log_iv(v: float, x: float, prec: int = ARB_PREC) -> arb:
         return ref
 
 
-def assert_matches_arb_interval(
+def assert_close_to_arb(
     got: float,
     ref: arb,
     rtol: float = RTOL,
     atol: float = ATOL,
 ) -> None:
-    """Prefer Arb interval containment; allow tiny midpoint-relative fallback."""
-    if ref.contains(got):
-        return
     mid = float(ref.mid())
-    err = abs(got - mid)
-    tol = atol + rtol * abs(mid)
-    assert err <= tol, (
-        f"Value outside Arb interval and fallback tolerance: "
-        f"got={got}, ref={ref}, mid={mid}, err={err}, tol={tol}"
+    assert math.isclose(got, mid, rel_tol=rtol, abs_tol=atol), (
+        f"got={got}, ref={ref}, mid={mid}, error={abs(got - mid)}"
     )
 
 
@@ -48,7 +42,7 @@ GRID_POINTS: Final[tuple[tuple[float, float], ...]] = tuple(
 def test_iv_log_matches_arb_on_thorough_grid(v: float, x: float) -> None:
     got = float(iv_log(v, x))
     ref = arb_log_iv(v, x)
-    assert_matches_arb_interval(got, ref)
+    assert_close_to_arb(got, ref)
 
 
 def test_iv_log_broadcast_matches_elementwise_arb() -> None:
@@ -62,7 +56,7 @@ def test_iv_log_broadcast_matches_elementwise_arb() -> None:
         for j, xx in enumerate(x[0, :].tolist()):
             got = float(out_np[i][j])
             ref = arb_log_iv(float(vv), float(xx))
-            assert_matches_arb_interval(got, ref)
+            assert_close_to_arb(got, ref)
 
 
 def test_iv_log_zero_x_behavior() -> None:

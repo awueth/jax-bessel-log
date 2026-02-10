@@ -14,27 +14,23 @@ V_VALUES: Final[tuple[float, ...]] = (0.0, 0.1, 0.7, 1.0, 3.0, 10.0, 20.0, 80.0,
 X_VALUES: Final[tuple[float, ...]] = (1e-6, 1e-3, 0.1, 1.0, 5.0, 20.0, 60.0, 200.0)
 
 
-def arb_log_iv(v: float, x: float, prec: int = ARB_PREC) -> tuple[arb, float]:
-    """Return Arb interval and midpoint for log(I_v(x))."""
-    old_prec = ctx.prec
-    ctx.prec = prec
-    try:
+def arb_log_iv(v: float, x: float, prec: int = ARB_PREC) -> arb:
+    """Return Arb interval log(I_v(x))."""
+    with ctx.workprec(prec):
         ref = arb(x).bessel_i(arb(v)).log()
-        return ref, float(ref.mid())
-    finally:
-        ctx.prec = old_prec
+        return ref
 
 
 def assert_matches_arb_interval(
     got: float,
     ref: arb,
-    mid: float,
     rtol: float = RTOL,
     atol: float = ATOL,
 ) -> None:
     """Prefer Arb interval containment; allow tiny midpoint-relative fallback."""
     if ref.contains(got):
         return
+    mid = float(ref.mid())
     err = abs(got - mid)
     tol = atol + rtol * abs(mid)
     assert err <= tol, (
@@ -51,8 +47,8 @@ GRID_POINTS: Final[tuple[tuple[float, float], ...]] = tuple(
 @pytest.mark.parametrize(("v", "x"), GRID_POINTS)
 def test_iv_log_matches_arb_on_thorough_grid(v: float, x: float) -> None:
     got = float(iv_log(v, x))
-    ref, mid = arb_log_iv(v, x)
-    assert_matches_arb_interval(got, ref, mid)
+    ref = arb_log_iv(v, x)
+    assert_matches_arb_interval(got, ref)
 
 
 def test_iv_log_broadcast_matches_elementwise_arb() -> None:
@@ -65,8 +61,8 @@ def test_iv_log_broadcast_matches_elementwise_arb() -> None:
     for i, vv in enumerate(v[:, 0].tolist()):
         for j, xx in enumerate(x[0, :].tolist()):
             got = float(out_np[i][j])
-            ref, mid = arb_log_iv(float(vv), float(xx))
-            assert_matches_arb_interval(got, ref, mid)
+            ref = arb_log_iv(float(vv), float(xx))
+            assert_matches_arb_interval(got, ref)
 
 
 def test_iv_log_zero_x_behavior() -> None:

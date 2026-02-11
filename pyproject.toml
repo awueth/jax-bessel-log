@@ -1,11 +1,18 @@
 [project]
 name = "jax-bessel-log"
 version = "0.1.0"
-description = "Add your description here"
+description = "Pure JAX implementation of log(I_v(x)) - logarithm of modified Bessel function of the first kind"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "jax>=0.9.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
     "pytest>=9.0.2",
     "python-flint>=0.8.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["jax_bessel_log*"]

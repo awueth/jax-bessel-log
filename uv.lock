@@ -7,23 +7,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "bessel"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "jax" },
-    { name = "pytest" },
-    { name = "python-flint" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "jax", specifier = ">=0.9.0.1" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "python-flint", specifier = ">=0.8.0" },
-]
-
-[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -55,6 +38,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/52/40/f85d1feadd8f793fc1bfab726272523ef34b27302b55861ea872ec774019/jax-0.9.0.1.tar.gz", hash = "sha256:e395253449d74354fa813ff9e245acb6e42287431d8a01ff33d92e9ee57d36bd", size = 2534795, upload-time = "2026-02-05T18:47:33.088Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/57/1e/63ac22ec535e08129e16cb71b7eeeb8816c01d627ea1bc9105e925a71da0/jax-0.9.0.1-py3-none-any.whl", hash = "sha256:3baeaec6dc853394c272eb38a35ffba1972d67cf55d07a76bdb913bcd867e2ca", size = 2955477, upload-time = "2026-02-05T18:45:22.885Z" },
+]
+
+[[package]]
+name = "jax-bessel-log"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "jax" },
+    { name = "pytest" },
+    { name = "python-flint" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jax", specifier = ">=0.9.0.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "python-flint", specifier = ">=0.8.0" },
 ]
 
 [[package]]

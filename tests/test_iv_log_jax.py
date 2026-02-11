@@ -4,7 +4,7 @@ from typing import Final
 import jax.numpy as jnp
 import pytest
 from flint import arb, ctx
-from jax_bessel_log.iv_log_jax import iv_log
+from jax_bessel_log.iv_log import iv_log
 
 RTOL: Final[float] = 1e-6
 ATOL: Final[float] = 1e-4

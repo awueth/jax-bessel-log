@@ -212,6 +212,3 @@ _iv_log_jit = jax.jit(_iv_log_eager)
 def iv_log(v: jax.Array, x: jax.Array) -> jax.Array:
     """JIT-compiled log(I_v(x)) with broadcasting over `v` and `x`."""
     return _iv_log_jit(v, x)
-
-
-__all__ = ["iv_log", "_iv_log_eager"]

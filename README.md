@@ -1,0 +1,1 @@
+`jax-bessel-log` is a pure JAX implementation of `log(I_v(x))` — the logarithm of the modified Bessel function of the first kind. It's a port of the CUDA implementation from CUSF to JAX, https://lab.compute.dtu.dk/cusf/cusf.

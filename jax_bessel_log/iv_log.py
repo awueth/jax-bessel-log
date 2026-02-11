@@ -23,64 +23,40 @@ LOG_2 = 0.69314718055994529
 LOG_4 = 1.3862943611198906
 
 
-def _as_float_dtype(v: jax.Array, x: jax.Array) -> jnp.dtype:
-    dtype = jnp.result_type(v, x)
-    if not jnp.issubdtype(dtype, jnp.inexact):
-        dtype = jnp.result_type(dtype, jnp.float32)
-    return dtype
-
-
-def _c(value: float, dtype: jnp.dtype) -> jax.Array:
-    return jnp.asarray(value, dtype=dtype)
-
-
 def _branch_mu20(v: jax.Array, x: jax.Array, log_x: jax.Array) -> jax.Array:
-    dtype = v.dtype
-    mu = _c(4.0, dtype) * v * v
-    one = _c(1.0, dtype)
-    eight = _c(8.0, dtype)
+    mu = 4.0 * v * v
 
     def body(i: int, state: tuple[jax.Array, jax.Array]) -> tuple[jax.Array, jax.Array]:
         curr_term, sum_terms = state
-        k = _c(2 * i + 1, dtype)
-        c = _c(i + 1, dtype)
-        curr_term = curr_term * -(mu - k * k) / (c * eight * x)
+        k = 2 * i + 1
+        c = i + 1
+        curr_term = curr_term * -(mu - k * k) / (c * 8.0 * x)
         sum_terms = sum_terms + curr_term
         return curr_term, sum_terms
 
-    _, sum_terms = lax.fori_loop(0, 20, body, (one, one))
+    _, sum_terms = lax.fori_loop(0, 20, body, (1.0, 1.0))
     return (
         x
-        + _c(LOG_INV_SQRT_2PI, dtype)
-        - _c(0.5, dtype) * log_x
+        + LOG_INV_SQRT_2PI
+        - 0.5 * log_x
         + jnp.log(jnp.abs(sum_terms))
     )
 
 
-def _branch_uk13(
-    v: jax.Array,
-    x: jax.Array,
-    log_x: jax.Array,
-    log_v: jax.Array,
-) -> jax.Array:
-    dtype = v.dtype
-    one = _c(1.0, dtype)
-    quarter = _c(0.25, dtype)
-    half = _c(0.5, dtype)
-
+def _branch_uk13(v: jax.Array, x: jax.Array, log_x: jax.Array, log_v: jax.Array) -> jax.Array:
     v2 = v * v
     v4 = v2 * v2
     v8 = v4 * v4
 
     x_prime_2 = (x * x) / v2
-    sqrt_1_plus_x2 = jnp.sqrt(one + x_prime_2)
-    t = one / sqrt_1_plus_x2
-    t2 = one / (one + x_prime_2)
+    sqrt_1_plus_x2 = jnp.sqrt(1.0 + x_prime_2)
+    t = 1.0 / sqrt_1_plus_x2
+    t2 = 1.0 / (1.0 + x_prime_2)
     t4 = t2 * t2
     t8 = t4 * t4
 
     poly = (
-        one
+        1.0
         + u1(t, t2) / v
         + u2(t2, t4) / v2
         + u3(t, t2) / (v * v2)
@@ -97,29 +73,21 @@ def _branch_uk13(
     )
 
     return (
-        _c(LOG_INV_SQRT_2PI, dtype)
-        - half * log_v
+        LOG_INV_SQRT_2PI
+        - 0.5 * log_v
         + v * (sqrt_1_plus_x2 + log_x - log_v - jnp.log1p(sqrt_1_plus_x2))
-        - quarter * jnp.log1p(x_prime_2)
+        - 0.25 * jnp.log1p(x_prime_2)
         + jnp.log(jnp.abs(poly))
     )
 
 
 def _branch_series(v: jax.Array, x: jax.Array, log_x: jax.Array) -> jax.Array:
-    dtype = v.dtype
-    one = _c(1.0, dtype)
-    two = _c(2.0, dtype)
-    four = _c(4.0, dtype)
-
-    # Keep this for structural parity with the CUDA implementation.
-    _ = two * log_x - _c(LOG_4, dtype)
-
-    x2_over_4 = x * x / four
-    inv_x2_over_4 = one / x2_over_4
+    x2_over_4 = x * x / 4.0
+    inv_x2_over_4 = 1.0 / x2_over_4
     v_inv_x2_over_4 = v * inv_x2_over_4
 
-    first_term = -gammaln(v + one)
-    peak_k = jnp.floor((-v + jnp.sqrt(v * v + x * x)) / two).astype(jnp.int32)
+    first_term = -gammaln(v + 1.0)
+    peak_k = jnp.floor((-v + jnp.sqrt(v * v + x * x)) / 2.0).astype(jnp.int32)
 
     def max_cond(state: tuple[jnp.int32, jax.Array]) -> jax.Array:
         k, _ = state
@@ -127,8 +95,7 @@ def _branch_series(v: jax.Array, x: jax.Array, log_x: jax.Array) -> jax.Array:
 
     def max_body(state: tuple[jnp.int32, jax.Array]) -> tuple[jnp.int32, jax.Array]:
         k, max_term = state
-        kf = k.astype(dtype)
-        max_term = max_term - jnp.log(kf * (kf * inv_x2_over_4 + v_inv_x2_over_4))
+        max_term = max_term - jnp.log(k * (k * inv_x2_over_4 + v_inv_x2_over_4))
         return k + jnp.int32(1), max_term
 
     _, max_term = lax.while_loop(max_cond, max_body, (jnp.int32(1), first_term))
@@ -137,26 +104,22 @@ def _branch_series(v: jax.Array, x: jax.Array, log_x: jax.Array) -> jax.Array:
 
     def sum_body(k: int, state: tuple[jax.Array, jax.Array]) -> tuple[jax.Array, jax.Array]:
         term, sum_terms = state
-        kf = _c(k, dtype)
-        term = term - jnp.log(kf * (kf * inv_x2_over_4 + v_inv_x2_over_4))
+        term = term - jnp.log(k * (k * inv_x2_over_4 + v_inv_x2_over_4))
         sum_terms = sum_terms + jnp.exp(term - max_term)
         return term, sum_terms
 
     _, sum_terms = lax.fori_loop(1, N_TERMS, sum_body, (first_term, sum_terms0))
-    return v * (log_x - _c(LOG_2, dtype)) + max_term + jnp.log(sum_terms)
+    return v * (log_x - LOG_2) + max_term + jnp.log(sum_terms)
 
 
 def _iv_log_scalar_positive(v: jax.Array, x: jax.Array) -> jax.Array:
     log_x = jnp.log(x)
     log_v = jnp.log(v)
 
-    cond_mu = ((x > _c(30.0, v.dtype)) & (v < _c(15.3919, v.dtype))) | (
-        ((_c(0.5113, v.dtype) * log_x + _c(0.7939, v.dtype)) > log_v)
-        & (x > _c(59.6925, v.dtype))
+    cond_mu = ((x > 30.0) & (v < 15.3919)) | (
+        ((0.5113 * log_x + 0.7939) > log_v) & (x > 59.6925)
     )
-    cond_uk = ((x > _c(19.6931, v.dtype)) & (v > _c(0.7, v.dtype))) | (
-        v > _c(12.6964, v.dtype)
-    )
+    cond_uk = ((x > 19.6931) & (v > 0.7)) | (v > 12.6964)
 
     return lax.cond(
         cond_mu,
@@ -172,20 +135,20 @@ def _iv_log_scalar_positive(v: jax.Array, x: jax.Array) -> jax.Array:
 
 
 def _iv_log_scalar(v: jax.Array, x: jax.Array) -> jax.Array:
-    dtype = v.dtype
-    zero = _c(0.0, dtype)
-    nan = _c(float("nan"), dtype)
-    neg_inf = _c(float("-inf"), dtype)
-
-    invalid = (x < zero) | (v < zero)
+    invalid = (x < 0) | (v < 0)
 
     def invalid_case(_: None) -> jax.Array:
-        return nan
+        return jnp.full_like(v, jnp.nan)
 
     def valid_case(_: None) -> jax.Array:
         return lax.cond(
-            x == zero,
-            lambda __: lax.cond(v == zero, lambda ___: zero, lambda ___: neg_inf, None),
+            x == 0,
+            lambda __: lax.cond(
+                v == 0,
+                lambda ___: jnp.zeros_like(v),
+                lambda ___: jnp.full_like(v, -jnp.inf),
+                None,
+            ),
             lambda __: _iv_log_scalar_positive(v, x),
             operand=None,
         )
@@ -195,7 +158,7 @@ def _iv_log_scalar(v: jax.Array, x: jax.Array) -> jax.Array:
 
 def _iv_log_eager(v: jax.Array, x: jax.Array) -> jax.Array:
     """Eager (non-jitted) implementation of log(I_v(x))."""
-    dtype = _as_float_dtype(v, x)
+    dtype = jnp.result_type(v, x)
     v_arr = jnp.asarray(v, dtype=dtype)
     x_arr = jnp.asarray(x, dtype=dtype)
 

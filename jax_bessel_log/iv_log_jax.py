@@ -15,7 +15,7 @@ import jax.numpy as jnp
 from jax import lax
 from jax.scipy.special import gammaln
 
-from u_polynomials import u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13
+from jax_bessel_log.u_polynomials import u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13
 
 N_TERMS = 43
 LOG_INV_SQRT_2PI = -0.91893853320467267

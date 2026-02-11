@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import numpy as np
 import scipy
 
-from iv_log_jax import iv_log
+from jax_bessel_log.iv_log_jax import iv_log
 
 
 def log_iv_callback(v: jax.Array, z: jax.Array) -> jax.Array:

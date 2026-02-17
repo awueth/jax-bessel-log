@@ -15,7 +15,7 @@ def jv_log(v, z):
   z = z.astype(jnp.result_type(float, z.dtype))
 
   # Wrap scipy function to return the expected dtype.
-  _scipy_jv = lambda v, z: jnp.log(scipy.special.jve(v, z).astype(z.dtype)) + z
+  _scipy_jv = lambda v, z: jnp.log(scipy.special.jv(v, z).astype(z.dtype))
 
   # Define the expected shape & dtype of output.
   result_shape_dtype = jax.ShapeDtypeStruct(
